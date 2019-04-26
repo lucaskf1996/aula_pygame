@@ -4,9 +4,13 @@
 import pygame
 import random
 from os import path
+import time
 
 # Estabelece a pasta que contem as figuras.
 img_dir = path.join(path.dirname(__file__), 'img')
+
+#Estabelece a pasta que contem as figuras
+snd_dir = path.join(path.dirname(__file__), "snd")
 
 # Dados gerais do jogo.
 WIDTH = 480 # Largura da tela
@@ -49,7 +53,11 @@ class Player(pygame.sprite.Sprite):
         
         #velocidade da nave
         self.speedx = 0
-                
+        
+        #Melhora a colisao estabelecendo um raio de um circulo
+        self.radius = 25
+        
+        
     #metodo que atualiza a posicao da navinha
     def update(self):
         self.rect.x += self.speedx
@@ -82,6 +90,8 @@ class Mob(pygame.sprite.Sprite):
         self.speedx = random.randrange(-3,3)
         self.speedy = random.randrange(2,9)
         
+        self.radius = int(self.rect.width * 0.7 / 2)
+        
     def update(self):
         
         self.rect.x += self.speedx
@@ -95,7 +105,26 @@ class Mob(pygame.sprite.Sprite):
             self.speedx = random.randrange(-3,3)
             self.speedy = random.randrange(2,9)
 
-
+class Laser(pygame.sprite.Sprite):
+    
+    def __init__(self):
+        
+        pygame.sprite.Sprite.__init__(self)
+        
+        laser_img = pygame.image.load(path.join(img_dir, "laserRed16.png")).convert()
+        
+        self.image = laser_img
+        
+        self.rect = self.image.get_rect()
+        
+        self.image.set_colorkey(BLACK)
+        
+        self.image = pygame.transform.scale(laser_img, (10, 30))
+        
+    def update(self):
+        
+        #Velocidade do laser
+        self.rect.y -= 10
 
 # Inicialização do Pygame.
 pygame.init()
@@ -114,9 +143,15 @@ clock = pygame.time.Clock()
 background = pygame.image.load(path.join(img_dir, 'starfield.png')).convert()
 background_rect = background.get_rect()
 
+#Carrega os sons do Jogo
+pygame.mixer.music.load(path.join(snd_dir, 'narutao.wav'))
+pygame.mixer.music.set_volume(1)
+boom_sound = pygame.mixer.Sound(path.join(snd_dir, "expl3.wav"))
+laser_hit = pygame.mixer.Sound(path.join(snd_dir, "expl6.wav"))
+laser_pew = pygame.mixer.Sound(path.join(snd_dir, "pew.wav"))
+
 player = Player()
 
-mob = Mob()
 #cria um grupo de sprites e adiciona a nave
 all_sprites = pygame.sprite.Group()
 all_sprites.add(player)
@@ -126,9 +161,18 @@ for i in range(0,8):
     mob = Mob()
     all_sprites.add(mob)
     mobs.add(mob)
-    
+
+lista_laser = pygame.sprite.Group()
+
+#Flags dos botoes
+right_key=0
+left_key=0
+
+
 # Comando para evitar travamentos.
 try:
+    #Inicia a musica
+    pygame.mixer.music.play(loops=-1)
     
     # Loop principal.
     running = True
@@ -143,26 +187,76 @@ try:
             # Verifica se foi fechado
             if event.type == pygame.QUIT:
                 running = False
-    
+            
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    #Atira
+                    laser = Laser()
+                    
+                    laser_pew.play()
+                    
+                    #colocando o laser no lugar do jogador
+                    laser.rect.x = player.rect.x + 20
+                    laser.rect.y = player.rect.y
+                    
+                    #adiciona laser pra lista de laser
+                    all_sprites.add(laser)
+                    lista_laser.add(laser)
+            
             #verifica se apertou alguma tecla    
             if event.type == pygame.KEYDOWN:
                 #depende da tecla, altera a velocidade
                 if event.key == pygame.K_LEFT:
                     player.speedx = -8
+                    left_key = 1
                 if event.key == pygame.K_RIGHT:
+                    right_key = 1
                     player.speedx = 8
                    
             #verifica se soltou alguma tecla
             if event.type == pygame.KEYUP:
+                
                 #dependendo da tecla, altera a velocidade
                 if event.key == pygame.K_LEFT:
+                    left_key = 0
                     player.speedx = 0
+                    if right_key == 1:
+                        player.speedx = 8
+                    
                 if event.key == pygame.K_RIGHT:
+                    right_key = 0
                     player.speedx = 0
-            
+                    if left_key == 1:
+                        player.speedx = -8
+                        
         #depois de processar os eventos
         #atualiza a acao de cada sprite
         all_sprites.update()
+        
+        #verifica se houve colisao entre nave e meteroro
+        hits1 = pygame.sprite.spritecollide(player, mobs, False, pygame.sprite.collide_circle)
+        if hits1:
+            
+            #toca som de colisao
+            boom_sound.play()
+            #precisa esperar senao fecha
+            time.sleep(1)
+            
+            running = False
+            
+        
+        #for laser in lista_laser:
+            
+        hits2 = pygame.sprite.groupcollide(lista_laser, mobs, True, True)
+        
+        for hit in hits2:
+            
+            mob = Mob()
+            laser_pew.play()
+            mobs.add(mob)
+            all_sprites.add(mob)
+
+        
         # A cada loop, redesenha o fundo e os sprites
         screen.fill(BLACK)
         screen.blit(background, background_rect)
