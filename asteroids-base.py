@@ -72,12 +72,6 @@ class Player(pygame.sprite.Sprite):
         if self.rect.y < 30:
             self.rect.y = 30
 
-
-
-
-
-
-
 class Mob(pygame.sprite.Sprite):
     
     def __init__(self, mob_img):
@@ -95,7 +89,7 @@ class Mob(pygame.sprite.Sprite):
         velocidade_max_x = 5
         velocidade_min_x = -5
 
-        self.rect.y = random.randrange(-100,-40)
+        self.rect.y = random.randrange(-300,-40)
         self.rect.x = random.randrange(0, WIDTH)
         
         #quanto mais proximo de WIDTH mais eu retiro e quanto mais longe menos eu retiro
@@ -201,6 +195,24 @@ class Explosion(pygame.sprite.Sprite):
                 self.rect = self.image.get_rect()
                 self.rect.center = center
 
+class Heart(pygame.sprite.Sprite):
+
+    def __init__(self, heart_img, pos_x):
+
+        pygame.sprite.Sprite.__init__(self)
+
+        self.image = heart_img
+
+        self.rect = self.image.get_rect()
+
+        self.image.set_colorkey(BLACK)
+
+        self.rect.x = 50 + pos_x
+        self.rect.y = HEIGHT -50
+
+        self.image = pygame.transform.scale(heart_img, (30,30))
+
+
 def load_assets(img_dir, snd_dir):
     assets = {}
     assets["player_img"] = pygame.image.load(path.join(img_dir, "playerShip1_orange.png")).convert()
@@ -219,6 +231,7 @@ def load_assets(img_dir, snd_dir):
         explosion_anim.append(img)
     assets["explosion_anim"] = explosion_anim
     assets["score_font"] = pygame.font.Font(path.join(fnt_dir, "PressStart2P.ttf"), 28)
+    assets["heart_img"] = pygame.image.load(path.join(img_dir, "coracao.jpg")).convert()
     return assets
     
 
@@ -235,10 +248,10 @@ pygame.display.set_caption("Super navinha")
 #carrega todos os assets de uma vez só e guarda em um dicionario
 assets = load_assets(img_dir, snd_dir)
 
-player = Player(assets["player_img"])
-mob = Mob(assets["mob_img"])
-laser = Laser(assets["laser_img"], player.rect.x, player.rect.y)
-
+#player = Player(assets["player_img"])
+#mob = Mob(assets["mob_img"])
+#laser = Laser(assets["laser_img"], player.rect.x, player.rect.y)
+#heart = Heart(assets["heart_img"])
 
 #variavel para o ajuste de velocidade
 clock = pygame.time.Clock()
@@ -271,6 +284,23 @@ for i in range(0,15):
 
 lista_laser = pygame.sprite.Group()
 
+heart_group = pygame.sprite.Group()
+posicao_coracao = 0
+
+heart1 = Heart(assets["heart_img"], posicao_coracao)
+heart_group.add(heart1)
+all_sprites.add(heart1)
+posicao_coracao +=40
+heart2 = Heart(assets["heart_img"], posicao_coracao)
+heart_group.add(heart2)
+all_sprites.add(heart2)
+posicao_coracao +=40
+heart3 = Heart(assets["heart_img"], posicao_coracao)
+heart_group.add(heart3)
+all_sprites.add(heart3)
+posicao_coracao +=40
+
+
 #Flags dos botoes
 right_key=0
 left_key=0
@@ -289,8 +319,8 @@ try:
     EXPLODING = 1
     DONE = 2
 
-    vidas = 0
-
+    vidas = 3
+    
     state = PLAYING
     # Loop principal.
     while state != DONE:
@@ -374,6 +404,14 @@ try:
                 state = EXPLODING
                 explosion_tick = pygame.time.get_ticks()
                 explosion_duration = explosao.frame_ticks * len(explosao.explosion_anim) + 400
+                if vidas == 3:
+                    heart3.kill()
+                elif vidas == 2:
+                    heart2.kill()
+                else:
+                    heart1.kill()
+                vidas-=1
+                posicao_coracao -=40
             
             
             hits2 = pygame.sprite.groupcollide(lista_laser, mobs, True, True)
@@ -389,12 +427,24 @@ try:
                 all_sprites.add(explosao)
 
                 score += 100
+                if score%100 == 0:
+                    if vidas == 2:
+                        heart3 = Heart(assets["heart_img"], posicao_coracao)
+                        heart_group.add(heart3)
+                        all_sprites.add(heart3)
+                        posicao_coracao +=40
+                        vidas+=1
+                    elif vidas == 1:
+                        heart2 = Heart(assets["heart_img"], posicao_coracao)
+                        heart_group.add(heart2)
+                        all_sprites.add(heart2)
+                        posicao_coracao += 40
+                        vidas+=1
         
         elif state == EXPLODING:
             now = pygame.time.get_ticks()
             if now - explosion_tick > explosion_duration:
-                vidas += 1
-                if vidas > 2:
+                if vidas == 0:
                     state = DONE
                 else:
                     player = Player(assets["player_img"])
