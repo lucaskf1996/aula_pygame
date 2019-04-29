@@ -202,10 +202,9 @@ class Heart(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
 
         self.image = heart_img
-
-        self.rect = self.image.get_rect()
-
         self.image.set_colorkey(BLACK)
+        
+        self.rect = self.image.get_rect()
 
         self.rect.x = 50 + pos_x
         self.rect.y = HEIGHT -50
@@ -231,7 +230,7 @@ def load_assets(img_dir, snd_dir):
         explosion_anim.append(img)
     assets["explosion_anim"] = explosion_anim
     assets["score_font"] = pygame.font.Font(path.join(fnt_dir, "PressStart2P.ttf"), 28)
-    assets["heart_img"] = pygame.image.load(path.join(img_dir, "coracao.jpg")).convert()
+    assets["heart_img"] = pygame.image.load(path.join(img_dir, "coracao.png")).convert()
     return assets
     
 
